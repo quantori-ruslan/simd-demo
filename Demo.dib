@@ -1,0 +1,145 @@
+#!markdown
+
+## SIMD инструкций очень много
+[Intel® Intrinsics Guide](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html)
+
+AVX1 supports only floating point operations\
+AVX2 adds 256 bit integer operations\
+AVX-512 is a set of 512 bit vector instructions.
+
+
+## Что есть в .Net
+Almost no documentation.\
+[AVX-512 is not supported](https://github.com/dotnet/runtime/issues/8264).
+
+### System.Runtime.Intrinsics
+[x86/x64 SIMD Instruction List (SSE to AVX512)](https://drachev.com/officedaytime/).
+
+MSDN:
+- [System.Runtime.Intrinsics.X86](https://docs.microsoft.com/en-us/dotnet/api/system.runtime.intrinsics.x86) - API к SIMD для x86 и x64.
+- [System.Runtime.Intrinsics.Arm](https://docs.microsoft.com/en-us/dotnet/api/system.runtime.intrinsics.Arm) - для ARM процессоров
+
+Pros:
+- Wider subset of SIMD operations
+
+Cons:
+- Very difficult for understanding
+- Complicated logic caused by multiple `xxx.IsSupported` checks and fallbacks.
+
+### System.Numerics.Vector
+[High-level API for SIMD](https://docs.microsoft.com/en-us/dotnet/api/System.Numerics.Vector?view=net-6.0)
+
+Requirements:
+- 64-bit app
+- Runtime that uses the RyuJIT compiler (.NET Core and in .NET Framework 4.6 and later)
+
+Pros:
+- Very simple
+- Works for processors without SIMD extensions (but slower than classical non-simd code)
+
+Cons:
+- Limited capabilities
+
+Samples on GitHub ([Mandelbrot](https://github.com/microsoft/dotnet-samples/tree/master/System.Numerics/SIMD/Mandelbrot), [RayTracer](https://github.com/microsoft/dotnet-samples/tree/master/System.Numerics/SIMD/RayTracer)) + [Article](https://devblogs.microsoft.com/dotnet/the-jit-finally-proposed-jit-and-simd-are-getting-married/).
+
+#!csharp
+
+using System.Numerics;
+
+var isHwAccelerated = Vector.IsHardwareAccelerated;
+var vectorSize = Vector<byte>.Count;
+
+display(new {isHwAccelerated, vectorSize, vectorSizeBits = vectorSize * 8});
+
+#!csharp
+
+display(new{
+    shortVector = Vector<short>.Count,
+    intVector = Vector<int>.Count,
+    longVector = Vector<long>.Count
+})
+
+#!markdown
+
+Number of SIMD Cores = Number of physical cores
+
+#!csharp
+
+System.Environment.ProcessorCount / 2
+
+#!csharp
+
+var a = new Vector<long>(new long[]{1,2,3,4});
+var b = new Vector<long>(new long[]{5,6,7,8});
+var c = a + b;
+
+display(c)
+
+#!csharp
+
+new Vector<long>(new long[]{1,2,3});
+
+#!csharp
+
+a = new Vector<long>(new long[]{1,2,3,4,5,6,7});
+b = new Vector<long>(new long[]{1,2,3,4,5,6,7});
+a+b
+
+#!csharp
+
+var ar = new long[]{
+    1, 2, 3, 4, 
+    5, 6, 7, 8
+};
+var v1 = new Vector<long>(ar.Skip(0).Take(4).ToArray());
+var v2 = new Vector<long>(ar.Skip(4).Take(4).ToArray());
+
+new {v1, v2}
+
+#!csharp
+
+var ar = new long[]{1,2,3,4};
+var type = ar.GetType();
+
+new {type.Name, type.IsClass}
+
+#!csharp
+
+var ar = new long[]{
+    1, 2, 3, 4, 
+    5, 6, 7, 8,
+    9
+};
+var m = new Memory<long>(ar);
+var v1 = new Vector<long>(m.Slice(0, 4).Span);
+var v2 = new Vector<long>(m.Slice(4).Span);
+
+new {v1, v2}
+
+#!markdown
+
+## SimdFlow
+https://github.com/quantori/SimdFlow
+
+#!markdown
+
+## Local sequence alignment
+```
+ATATACTCGGCTT
+ACTCAC
+```
+
+```
+ATATACTCGACTT
+    ACTC-AC
+```
+
+
+
+## Smith–Waterman algorithm
+[Wiki](https://en.wikipedia.org/wiki/Smith%E2%80%93Waterman_algorithm)
+
+
+
+## Remarks
+SIMD is more likely to remove one bottleneck and expose the next, for example memory throughput. In general the performance benefit of using SIMD varies depending on the specific scenario, and in some cases it can even perform worse than simpler non-SIMD equivalent code.
